@@ -1,13 +1,21 @@
 const cache = new Map();
 const TTL = 60_000;
+// Optional shared cache in Upstash Redis (serverless instances don't share memory).
+let redis = null;
+const rUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+const rTok = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+if (rUrl && rTok) { try { const { Redis } = require('@upstash/redis'); redis = new Redis({ url: rUrl, token: rTok }); } catch {} }
 async function getJSON(url, ttl = TTL) {
-  const hit = cache.get(url);
+  let hit = cache.get(url);
+  if (!hit && redis) { try { const r = await redis.get('pp:' + url); if (r) { hit = r; cache.set(url, r); } } catch {} }
   if (hit && Date.now() - hit.t < ttl) return hit.v;
   const res = await fetch(url, { headers: { accept: 'application/json' } });
   if (res.status === 429) { if (hit) return hit.v; throw new Error('RATE_LIMIT'); }
   if (!res.ok) { if (hit) return hit.v; throw new Error('HTTP_' + res.status); }
   const v = await res.json();
-  cache.set(url, { t: Date.now(), v });
+  const e = { t: Date.now(), v };
+  cache.set(url, e);
+  if (redis) redis.set('pp:' + url, e, { ex: Math.max(3600, Math.ceil(ttl / 1000) * 4) }).catch(() => {});
   return v;
 }
 const CG = 'https://api.coingecko.com/api/v3';

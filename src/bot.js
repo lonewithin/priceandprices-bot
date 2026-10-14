@@ -1,9 +1,5 @@
-try { require('fs').readFileSync('.env','utf8').split('\n').forEach(l=>{const m=l.match(/^(\w+)=(.*)$/);if(m&&!process.env[m[1]])process.env[m[1]]=m[2];}); } catch {}
 const { Bot, GrammyError, HttpError } = require('grammy');
 const api = require('./api');
-const token = process.env.TELEGRAM_BOT_TOKEN;
-if (!token) { console.error('Missing TELEGRAM_BOT_TOKEN'); process.exit(1); }
-const bot = new Bot(token);
 const fmt = (n, c = 'usd') => (c === 'ngn' ? '₦' : '$') + Number(n).toLocaleString('en-US', { maximumFractionDigits: n < 1 ? 8 : 2 });
 const pct = n => n == null ? '' : `${n >= 0 ? '🟢 +' : '🔴 '}${n.toFixed(2)}%`;
 const errMsg = e => e.message === 'RATE_LIMIT' ? '⏳ Price API is busy, try again in a minute.' : '⚠️ Something went wrong, try again.';
@@ -24,6 +20,8 @@ const HELP = `*PriceAndPrices Bot* 📊
 /sol <address> — SOL balance (read-only)
 /news [coin] — latest SOL (or coin) news
 Or just type \`$sol\`, \`$btc\`…`;
+function createBot(token) {
+const bot = new Bot(token);
 bot.command('start', c => c.reply(`👋 Welcome to *PriceAndPrices Bot*!\nLive crypto prices in USD & Naira.\n\nMade by Promise (@promiseishere)\n\n${HELP}`, { parse_mode: 'Markdown' }));
 bot.command('help', c => c.reply(HELP, { parse_mode: 'Markdown' }));
 const priceCmd = async c => {
@@ -84,15 +82,17 @@ bot.catch(err => {
   else if (e instanceof HttpError) console.error('Network error:', e.message);
   else console.error('Error:', e);
 });
-(async () => {
-  await bot.api.setMyCommands([
-    { command: 'price', description: 'Coin price in USD + NGN' }, { command: 'p', description: 'Price shortcut' },
-    { command: 'convert', description: 'Convert amount of coin to NGN/USD' }, { command: 'top', description: 'Top 10 by market cap' },
-    { command: 'trending', description: 'Trending coins' }, { command: 'news', description: 'Latest SOL news (or /news <coin>)' }, { command: 'sol', description: 'SOL balance of an address' },
-    { command: 'help', description: 'How to use' }]);
-  await bot.api.setMyShortDescription('Live crypto prices in USD & Naira. Made by Promise (@promiseishere)').catch(() => {});
-  await bot.api.setMyDescription('Type $sol or /price btc for live prices in USD & NGN. Top 10, trending, converter and Solana balance checks.').catch(() => {});
-  const me = await bot.api.getMe();
-  console.log(`[${new Date().toISOString()}] Started as @${me.username}`);
-  bot.start({ drop_pending_updates: false });
-})();
+return bot;
+}
+const COMMANDS = [
+  { command: 'price', description: 'Coin price in USD + NGN' }, { command: 'p', description: 'Price shortcut' },
+  { command: 'convert', description: 'Convert amount of coin to NGN/USD' }, { command: 'top', description: 'Top 10 by market cap' },
+  { command: 'trending', description: 'Trending coins' }, { command: 'news', description: 'Latest SOL news (or /news <coin>)' }, { command: 'sol', description: 'SOL balance of an address' },
+  { command: 'help', description: 'How to use' }];
+async function setupProfile(api) {
+  await api.setMyCommands(COMMANDS);
+  await api.setMyShortDescription('Live crypto prices in USD & Naira. Made by Promise (@promiseishere)').catch(() => {});
+  await api.setMyDescription('Type $sol or /price btc for live prices in USD & NGN. Top 10, trending, converter and Solana balance checks.').catch(() => {});
+}
+const ALLOWED_UPDATES = ['message'];
+module.exports = { createBot, setupProfile, COMMANDS, ALLOWED_UPDATES };

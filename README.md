@@ -33,3 +33,8 @@ Uses long polling, so it needs an always-on **worker** (no web port).
 Only run **one** instance at a time (Telegram allows one long-polling client per token).
 
 Never commit `.env`.
+
+## Serverless on Vercel (free Hobby)
+- `api/telegram.js` is the webhook (grammY `webhookCallback`); it rejects requests whose `X-Telegram-Bot-Api-Secret-Token` header doesn't match `WEBHOOK_SECRET`.
+- Env vars: `BOT_TOKEN`, `WEBHOOK_SECRET`; optional Upstash Redis (`KV_REST_API_URL`/`KV_REST_API_TOKEN` or `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`) for a shared price cache.
+- Switch-over: `BOT_TOKEN=... WEBHOOK_SECRET=... npm run set-webhook -- https://<project>.vercel.app/api/telegram`, then stop the local `npm start`. `--delete` reverts to polling.
