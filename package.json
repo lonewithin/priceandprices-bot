@@ -1,0 +1,18 @@
+{
+  "name": "priceandprices-bot",
+  "version": "1.0.0",
+  "description": "Telegram crypto price bot (USD + NGN) by Promise",
+  "main": "src/bot.js",
+  "scripts": {
+    "start": "node src/bot.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "grammy": "^1.46.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
